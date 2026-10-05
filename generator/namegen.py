@@ -50,10 +50,3 @@ def generate_unique_names(count, seed=None):
             seen.add(name)
             yield name
             produced += 1
-
-
-if __name__ == "__main__":
-    # Quick manual test
-    print("Five random settlement names:")
-    for n in generate_unique_names(5, seed=7):
-        print(" -", n)
