@@ -1,6 +1,3 @@
-"""Base class for any populated place on the map."""
-
-
 class Settlement:
 
     def __init__(self, name, x, y, population):
