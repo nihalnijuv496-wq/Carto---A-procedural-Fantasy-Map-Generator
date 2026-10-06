@@ -14,18 +14,30 @@ class WorldMap:
 
         self.elevation = None
         self.moisture = None
+        self.temperature = None
+        self.ice_noise = None
         self.biomes = None
         self.settlements = []
 
     def generate(self):
-        self.elevation, self.moisture = generate_terrain(
-            self.width, self.height, self.seed
+        self.elevation, self.moisture, self.temperature, self.ice_noise = (
+            generate_terrain(self.width, self.height, self.seed)
         )
-        self.biomes = classify_biomes(self.elevation, self.moisture)
+        self.biomes = classify_biomes(
+            self.elevation, self.moisture, self.temperature, self.ice_noise
+        )
         return self
 
     def _land_cells(self):
-        buildable = {"plains", "forest", "mountain"}
+        buildable = {
+            "plains",
+            "forest",
+            "deep_forest",
+            "desert",
+            "swamp",
+            "snowy_land",
+            "mountain",
+        }
         cells = []
         for y in range(self.height):
             for x in range(self.width):
