@@ -45,19 +45,23 @@ def _smooth(grid, passes=2):
     return result
 
 
+def _low_res_field(width, height, seed, scale, smooth_passes=2):
+    # Bigger scale = fewer points = bigger, simpler blobs
+    rng = np.random.default_rng(seed)
+    low_h = max(2, height // scale + 2)
+    low_w = max(2, width // scale + 2)
+    raw = _bilinear_upscale(rng.random((low_h, low_w)), height, width)
+    return _smooth(raw, passes=smooth_passes)
+
+
 def _layered_noise(
     width, height, seed, big_scale=10, detail_scale=3, detail_weight=0.25
 ):
     rng = np.random.default_rng(seed)
-
-    big_h = max(2, height // big_scale + 2)
-    big_w = max(2, width // big_scale + 2)
-    big_layer = _bilinear_upscale(rng.random((big_h, big_w)), height, width)
-
-    detail_h = max(2, height // detail_scale + 2)
-    detail_w = max(2, width // detail_scale + 2)
-    detail_layer = _bilinear_upscale(rng.random((detail_h, detail_w)), height, width)
-
+    big_layer = _low_res_field(width, height, seed, big_scale, smooth_passes=0)
+    detail_layer = _low_res_field(
+        width, height, seed + 7, detail_scale, smooth_passes=0
+    )
     combined = (1 - detail_weight) * big_layer + detail_weight * detail_layer
     return _smooth(combined, passes=2)
 
@@ -71,17 +75,28 @@ def _continent_mask(width, height, seed, scale=14):
 
 
 def generate_terrain(width, height, seed):
-    continent = _continent_mask(width, height, seed, scale=14)
-    texture = _layered_noise(width, height, seed, big_scale=8, detail_scale=3)
 
-    elevation = 0.75 * continent + 0.25 * texture
+    continent = _low_res_field(
+        width, height, seed, scale=max(width, height) // 5, smooth_passes=4
+    )
+    texture = _layered_noise(
+        width, height, seed, big_scale=14, detail_scale=6, detail_weight=0.15
+    )
 
-    moisture = _layered_noise(width, height, seed + 1000, big_scale=10, detail_scale=4)
-
+    elevation = 0.85 * continent + 0.15 * texture
     elevation = (elevation - elevation.min()) / (elevation.max() - elevation.min())
-    moisture = (moisture - moisture.min()) / (moisture.max() - moisture.min())
+    lake_noise = _low_res_field(
+        width, height, seed + 500, scale=max(width, height) // 5, smooth_passes=3
+    )
+    lake_noise = (lake_noise - lake_noise.min()) / (lake_noise.max() - lake_noise.min())
+    is_solid_land = elevation > 0.45
+    is_lake = is_solid_land & (lake_noise > 0.90)
+    elevation = np.where(is_lake, 0.10, elevation)
 
     elevation = elevation**1.5
+
+    moisture = _layered_noise(width, height, seed + 1000, big_scale=10, detail_scale=4)
+    moisture = (moisture - moisture.min()) / (moisture.max() - moisture.min())
 
     return elevation, moisture
 
@@ -97,7 +112,7 @@ def classify_biomes(elevation, moisture):
 
             if e < 0.30:
                 biomes[y, x] = "ocean"
-            elif e < 0.35:
+            elif e < 0.32:
                 biomes[y, x] = "coast"
             elif e > 0.95:
                 biomes[y, x] = "snow"

@@ -42,13 +42,12 @@ def _print_map_list(maps):
 
 
 def generate_new_map():
-    """Option 1: Generate a brand new procedural map."""
     print("\n[Generate New Map]")
 
     name = input("Map name (blank for 'Untitled'): ").strip() or "Untitled"
 
-    width = _ask_int("Width (default 100): ", default=100)
-    height = _ask_int("Height (default 100): ", default=100)
+    width = _ask_int("Width (default 100): ", default=1000)
+    height = _ask_int("Height (default 100): ", default=1000)
     settlement_count = _ask_int("Number of settlements (default 6): ", default=6)
 
     seed = random.randint(0, 999_999)
@@ -208,7 +207,7 @@ def export_map():
 
     maps = get_all_maps()
     if not maps:
-        print("No maps to export yet — generate one first (option 1).")
+        print("No maps to export yet - generate one first (option 1).")
         return
 
     _print_map_list(maps)
@@ -236,7 +235,7 @@ MENU_ACTIONS = {
 
 
 def print_menu():
-    print("\n===== Cartographer =====")
+    print("\n===== Carto =====")
     print("1. Generate new map")
     print("2. Load saved map")
     print("3. Manage maps")
