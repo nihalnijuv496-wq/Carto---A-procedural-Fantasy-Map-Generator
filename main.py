@@ -3,6 +3,7 @@ import random
 import sys
 
 from models.world_map import WorldMap
+from render.draw_map import show_map
 
 OUTPUT_DIR = "output"
 
@@ -39,8 +40,9 @@ def generate_new_map():
 
     session_maps.append(world)
 
-    print(f"\nGenerated '{name}' (seed={seed}, {width}x{height}).")
-    print(world.summary())
+    # print(f"\nGenerated '{name}' (seed={seed}, {width}x{height}).")
+    show_map(world=world)
+    # print(world.summary())
 
     # TODO: once database/ exists, save this map + its settlements here
 
