@@ -62,8 +62,20 @@ def _layered_noise(
     return _smooth(combined, passes=2)
 
 
+def _continent_mask(width, height, seed, scale=14):
+    rng = np.random.default_rng(seed)
+    low_h = max(2, height // scale + 2)
+    low_w = max(2, width // scale + 2)
+    raw = _bilinear_upscale(rng.random((low_h, low_w)), height, width)
+    return _smooth(raw, passes=4)
+
+
 def generate_terrain(width, height, seed):
-    elevation = _layered_noise(width, height, seed, big_scale=8, detail_scale=3)
+    continent = _continent_mask(width, height, seed, scale=14)
+    texture = _layered_noise(width, height, seed, big_scale=8, detail_scale=3)
+
+    elevation = 0.75 * continent + 0.25 * texture
+
     moisture = _layered_noise(width, height, seed + 1000, big_scale=10, detail_scale=4)
 
     elevation = (elevation - elevation.min()) / (elevation.max() - elevation.min())
@@ -83,9 +95,9 @@ def classify_biomes(elevation, moisture):
             e = elevation[y, x]
             m = moisture[y, x]
 
-            if e < 0.35:
+            if e < 0.30:
                 biomes[y, x] = "ocean"
-            elif e < 0.45:
+            elif e < 0.35:
                 biomes[y, x] = "coast"
             elif e > 0.95:
                 biomes[y, x] = "snow"
