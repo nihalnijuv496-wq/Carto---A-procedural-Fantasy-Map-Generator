@@ -43,8 +43,8 @@ def generate_new_map():
 
     name = input("Map name (blank for 'Untitled'): ").strip() or "Untitled"
 
-    width = _ask_int("Width (default 40): ", default=40)
-    height = _ask_int("Height (default 30): ", default=30)
+    width = _ask_int("Width (default 100): ", default=100)
+    height = _ask_int("Height (default 100): ", default=100)
     settlement_count = _ask_int("Number of settlements (default 6): ", default=6)
 
     seed = random.randint(0, 999_999)

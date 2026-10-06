@@ -44,14 +44,3 @@ def init_db():
 
     conn.commit()
     conn.close()
-
-
-if __name__ == "__main__":
-    # Quick manual test: create the tables and confirm they exist.
-    init_db()
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    tables = [row["name"] for row in cur.fetchall()]
-    conn.close()
-    print("Tables in database:", tables)

@@ -10,17 +10,31 @@ BIOME_COLORS = {
 }
 
 
-def _random_grid(width, height, seed):
-    rng = np.random.default_rng(seed)
-    return rng.random((height, width))
+def _bilinear_upscale(low_res, out_height, out_width):
+    low_h, low_w = low_res.shape
+
+    ys = np.linspace(0, low_h - 1, out_height)
+    xs = np.linspace(0, low_w - 1, out_width)
+
+    y0 = np.floor(ys).astype(int)
+    x0 = np.floor(xs).astype(int)
+    y1 = np.clip(y0 + 1, 0, low_h - 1)
+    x1 = np.clip(x0 + 1, 0, low_w - 1)
+
+    yf = (ys - y0).reshape(-1, 1)
+    xf = (xs - x0).reshape(1, -1)
+
+    top_left = low_res[np.ix_(y0, x0)]
+    top_right = low_res[np.ix_(y0, x1)]
+    bottom_left = low_res[np.ix_(y1, x0)]
+    bottom_right = low_res[np.ix_(y1, x1)]
+
+    top = top_left * (1 - xf) + top_right * xf
+    bottom = bottom_left * (1 - xf) + bottom_right * xf
+    return top * (1 - yf) + bottom * yf
 
 
-def _smooth(grid, passes=4):
-    """
-    Simple box-blur smoothing.
-    Repeatedly replaces each cell with the average of itself and its 4 neighbors.
-    """
-
+def _smooth(grid, passes=2):
     result = grid.copy()
     for _ in range(passes):
         up = np.roll(result, -1, axis=0)
@@ -31,17 +45,27 @@ def _smooth(grid, passes=4):
     return result
 
 
-def generate_terrain(width, height, seed):
-    """
-    Returns:
-        elevation (np.ndarray) with shape (height, width), values in [0, 1]
-        moisture  (np.ndarray) with shape (height, width), values in [0, 1]
-    """
-    elevation = _smooth(_random_grid(width, height, seed))
-    moisture = _smooth(_random_grid(width, height, seed + 1))
-    # seed + 1 so they are not identical
+def _layered_noise(
+    width, height, seed, big_scale=10, detail_scale=3, detail_weight=0.25
+):
+    rng = np.random.default_rng(seed)
 
-    # Normalize both back to [0, 1]
+    big_h = max(2, height // big_scale + 2)
+    big_w = max(2, width // big_scale + 2)
+    big_layer = _bilinear_upscale(rng.random((big_h, big_w)), height, width)
+
+    detail_h = max(2, height // detail_scale + 2)
+    detail_w = max(2, width // detail_scale + 2)
+    detail_layer = _bilinear_upscale(rng.random((detail_h, detail_w)), height, width)
+
+    combined = (1 - detail_weight) * big_layer + detail_weight * detail_layer
+    return _smooth(combined, passes=2)
+
+
+def generate_terrain(width, height, seed):
+    elevation = _layered_noise(width, height, seed, big_scale=8, detail_scale=3)
+    moisture = _layered_noise(width, height, seed + 1000, big_scale=10, detail_scale=4)
+
     elevation = (elevation - elevation.min()) / (elevation.max() - elevation.min())
     moisture = (moisture - moisture.min()) / (moisture.max() - moisture.min())
 
