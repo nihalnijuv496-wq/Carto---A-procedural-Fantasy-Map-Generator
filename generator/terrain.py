@@ -69,6 +69,8 @@ def generate_terrain(width, height, seed):
     elevation = (elevation - elevation.min()) / (elevation.max() - elevation.min())
     moisture = (moisture - moisture.min()) / (moisture.max() - moisture.min())
 
+    elevation = elevation**1.5
+
     return elevation, moisture
 
 
@@ -83,11 +85,11 @@ def classify_biomes(elevation, moisture):
 
             if e < 0.35:
                 biomes[y, x] = "ocean"
-            elif e < 0.40:
+            elif e < 0.45:
                 biomes[y, x] = "coast"
-            elif e > 0.85:
+            elif e > 0.95:
                 biomes[y, x] = "snow"
-            elif e > 0.70:
+            elif e > 0.80:
                 biomes[y, x] = "mountain"
             elif m > 0.5:
                 biomes[y, x] = "forest"
