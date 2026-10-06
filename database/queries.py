@@ -63,6 +63,42 @@ def get_settlements_for_map(map_id):
     return rows
 
 
+def get_total_population(map_id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT SUM(population) AS total FROM settlements WHERE map_id = ?", (map_id,)
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row["total"] or 0
+
+
+def get_largest_settlement(map_id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT * FROM settlements WHERE map_id = ? ORDER BY population DESC LIMIT 1",
+        (map_id,),
+    )
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def count_settlements_by_type(map_id):
+    """Return {type: count} for a map, e.g. {'village': 4, 'city': 2}."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT type, COUNT(*) AS count FROM settlements WHERE map_id = ? GROUP BY type",
+        (map_id,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return {row["type"]: row["count"] for row in rows}
+
+
 def delete_map(map_id):
     """Delete a map and all its settlements"""
     conn = get_connection()

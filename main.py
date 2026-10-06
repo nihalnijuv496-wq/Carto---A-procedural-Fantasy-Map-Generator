@@ -9,6 +9,10 @@ from database.queries import (
     get_all_maps,
     get_map_by_id,
     get_settlements_for_map,
+    delete_map,
+    get_total_population,
+    get_largest_settlement,
+    count_settlements_by_type,
 )
 from models.world_map import WorldMap
 from models.settlement import make_settlement
@@ -109,6 +113,96 @@ def list_saved_maps():
     _print_map_list(maps)
 
 
+def manage_maps():
+    while True:
+        print("\n===== Manage Maps =====")
+        print("1. List all maps")
+        print("2. View details for a map (settlements, population)")
+        print("3. Delete a map")
+        print("4. Back to main menu")
+
+        choice = input("> ").strip()
+
+        if choice == "1":
+            _manage_list_maps()
+        elif choice == "2":
+            _manage_view_map_details()
+        elif choice == "3":
+            _manage_delete_map()
+        elif choice == "4":
+            return
+        else:
+            print("Invalid choice, please enter a number from 1-4.")
+
+
+def _manage_list_maps():
+    print("\n[Saved Maps]")
+    maps = get_all_maps()
+    if not maps:
+        print("No saved maps yet — generate one first (option 1).")
+        return
+    _print_map_list(maps)
+
+
+def _manage_view_map_details():
+    print("\n[Map Details]")
+    maps = get_all_maps()
+    if not maps:
+        print("No saved maps yet — generate one first (option 1).")
+        return
+
+    _print_map_list(maps)
+    map_id = _ask_int("Enter map id to view: ", default=maps[0]["id"])
+
+    map_row = get_map_by_id(map_id)
+    if map_row is None:
+        print("No map found with that id.")
+        return
+
+    total_pop = get_total_population(map_id)
+    largest = get_largest_settlement(map_id)
+    type_counts = count_settlements_by_type(map_id)
+
+    print(
+        f"\n{map_row['name']}  ({map_row['width']}x{map_row['height']}, seed={map_row['seed']})"
+    )
+    print(f"  Total population: {total_pop}")
+    print(f"  Settlements by type: {type_counts or 'none'}")
+    if largest:
+        print(
+            f"  Largest settlement: {largest['name']} ({largest['type']}, pop={largest['population']})"
+        )
+
+
+def _manage_delete_map():
+    print("\n[Delete Map]")
+    maps = get_all_maps()
+    if not maps:
+        print("No saved maps yet — nothing to delete.")
+        return
+
+    _print_map_list(maps)
+    map_id = _ask_int("Enter map id to delete: ", default=maps[0]["id"])
+
+    map_row = get_map_by_id(map_id)
+    if map_row is None:
+        print("No map found with that id.")
+        return
+
+    confirm = (
+        input(
+            f"Delete '{map_row['name']}' (id={map_id}) and all its settlements? [y/N]: "
+        )
+        .strip()
+        .lower()
+    )
+    if confirm == "y":
+        delete_map(map_id)
+        print("Deleted.")
+    else:
+        print("Cancelled.")
+
+
 def export_map():
     print("\n[Export Map]")
 
@@ -136,7 +230,7 @@ def export_map():
 MENU_ACTIONS = {
     "1": generate_new_map,
     "2": load_saved_map,
-    "3": list_saved_maps,
+    "3": manage_maps,
     "4": export_map,
 }
 
@@ -145,7 +239,7 @@ def print_menu():
     print("\n===== Cartographer =====")
     print("1. Generate new map")
     print("2. Load saved map")
-    print("3. List saved maps")
+    print("3. Manage maps")
     print("4. Export map(PNG)")
     print("5. Exit")
 
