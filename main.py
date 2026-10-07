@@ -15,7 +15,7 @@ from database.queries import (
     count_settlements_by_type,
 )
 from models.world_map import WorldMap
-from models.settlement import make_settlement
+from models.settlement import make_settlement, make_special_settlement
 from render.draw_map import save_map, show_map
 
 OUTPUT_DIR = "output"
@@ -76,7 +76,16 @@ def _load_world_from_db(map_id):
     world.generate()
 
     for row in get_settlements_for_map(map_id):
-        settlement = make_settlement(row["name"], row["x"], row["y"], row["population"])
+        if row["type"] in ("village", "city"):
+            settlement = make_settlement(
+                row["name"], row["x"], row["y"], row["population"]
+            )
+            if row["type"] == "village":
+                settlement.founding_reason = row["notes"]
+        else:
+            settlement = make_special_settlement(
+                row["type"], row["name"], row["x"], row["y"]
+            )
         world.settlements.append(settlement)
 
     return world
