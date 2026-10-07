@@ -1,17 +1,17 @@
 import numpy as np
 
 BIOME_COLORS = {
-    "deep_ocean": "#0d2c54",
-    "ocean": "#1f4e8c",
-    "ice": "#bfe3f0",
-    "coast": "#e8d9a0",
-    "plains": "#8bc34a",
-    "forest": "#2e7d32",
-    "deep_forest": "#184d1b",
-    "desert": "#e0c068",
-    "swamp": "#5b6f52",
-    "mountain": "#8d8d8d",
-    "mountain_snow": "#f5f5f5",
+    "deep_ocean": "#101038",
+    "ocean": "#3c3cb4",
+    "ice": "#a0a0ff",
+    "coast": "#f7e9a0",
+    "plains": "#8db360",
+    "forest": "#056621",
+    "deep_forest": "#004113",
+    "desert": "#faeac1",
+    "swamp": "#2c422b",
+    "mountain": "#737373",
+    "mountain_snow": "#e0e0e0",
     "snowy_land": "#ffffff",
 }
 
