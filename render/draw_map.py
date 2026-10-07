@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 
 from generator.terrain import BIOME_COLORS
 
@@ -21,6 +22,16 @@ BIOME_ORDER = [
 ]
 BIOME_TO_INDEX = {name: i for i, name in enumerate(BIOME_ORDER)}
 
+SETTLEMENT_STYLES = {
+    "village": {"marker": "o", "color": "#d32f2f", "size": 30},
+    "city": {"marker": "s", "color": "#d32f2f", "size": 60},
+    "witch_hut": {"marker": "^", "color": "#8e44ad", "size": 50},
+    "school": {"marker": "P", "color": "#2980b9", "size": 55},
+    "dungeon": {"marker": "X", "color": "#4a0404", "size": 55},
+    "palace": {"marker": "*", "color": "#ffd700", "size": 90},
+    "portal": {"marker": "D", "color": "#00e5ff", "size": 55},
+}
+
 
 def _biomes_to_index_grid(biomes):
     height, width = biomes.shape
@@ -38,11 +49,19 @@ def _build_figure(world):
     fig, ax = plt.subplots(figsize=(8, 6))
     ax.imshow(index_grid, cmap=cmap, vmin=0, vmax=len(BIOME_ORDER) - 1, origin="upper")
 
+    seen_types = set()
     for s in world.settlements:
-        marker = "s" if s.settlement_type == "city" else "o"
-        size = 60 if s.settlement_type == "city" else 30
+        style = SETTLEMENT_STYLES.get(
+            s.settlement_type, {"marker": "o", "color": "#d32f2f", "size": 30}
+        )
         ax.scatter(
-            s.x, s.y, marker=marker, s=size, c="#d32f2f", edgecolors="black", zorder=3
+            s.x,
+            s.y,
+            marker=style["marker"],
+            s=style["size"],
+            c=style["color"],
+            edgecolors="black",
+            zorder=3,
         )
         ax.annotate(
             s.name,
@@ -52,10 +71,27 @@ def _build_figure(world):
             xytext=(3, 3),
             textcoords="offset points",
         )
+        seen_types.add(s.settlement_type)
 
     legend_handles = [
         Patch(color=BIOME_COLORS[name], label=name.title()) for name in BIOME_ORDER
     ]
+    for stype in sorted(seen_types):
+        style = SETTLEMENT_STYLES.get(stype, {"marker": "o", "color": "#d32f2f"})
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker=style["marker"],
+                color="w",
+                markerfacecolor=style["color"],
+                markeredgecolor="black",
+                markersize=8,
+                label=stype.replace("_", " ").title(),
+                linestyle="none",
+            )
+        )
+
     ax.legend(
         handles=legend_handles, loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=8
     )

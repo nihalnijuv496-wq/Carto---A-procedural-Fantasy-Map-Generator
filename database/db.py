@@ -38,6 +38,7 @@ def init_db():
             x INTEGER NOT NULL,
             y INTEGER NOT NULL,
             population INTEGER NOT NULL,
+            notes TEXT,
             FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
         )
     """)

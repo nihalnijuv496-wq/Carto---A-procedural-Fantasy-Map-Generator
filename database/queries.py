@@ -21,8 +21,16 @@ def insert_settlement(map_id, settlement):
     conn = get_connection()
     cur = conn.cursor()
     cur.execute(
-        "INSERT INTO settlements (map_id, name, type, x, y, population) VALUES (?, ?, ?, ?, ?, ?)",
-        (map_id, data["name"], data["type"], data["x"], data["y"], data["population"]),
+        "INSERT INTO settlements (map_id, name, type, x, y, population, notes) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            map_id,
+            data["name"],
+            data["type"],
+            data["x"],
+            data["y"],
+            data["population"],
+            data["notes"],
+        ),
     )
     conn.commit()
     conn.close()
