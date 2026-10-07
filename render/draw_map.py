@@ -5,6 +5,7 @@ from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
 from generator.terrain import BIOME_COLORS
+from models.settlement import Village
 
 BIOME_ORDER = [
     "deep_ocean",
@@ -32,6 +33,14 @@ SETTLEMENT_STYLES = {
     "portal": {"marker": "D", "color": "#00e5ff", "size": 55},
 }
 
+FOUNDING_REASON_STYLES = {
+    "mining": {"marker": "v", "color": "#6d4c41"},
+    "market": {"marker": "<", "color": "#f1c40f"},
+    "crops": {"marker": "p", "color": "#9ccc65"},
+}
+
+FOUNDING_REASON_OFFSET = 15
+
 
 def _biomes_to_index_grid(biomes):
     height, width = biomes.shape
@@ -50,6 +59,7 @@ def _build_figure(world):
     ax.imshow(index_grid, cmap=cmap, vmin=0, vmax=len(BIOME_ORDER) - 1, origin="upper")
 
     seen_types = set()
+    seen_reasons = set()
     for s in world.settlements:
         style = SETTLEMENT_STYLES.get(
             s.settlement_type, {"marker": "o", "color": "#d32f2f", "size": 30}
@@ -73,6 +83,22 @@ def _build_figure(world):
         )
         seen_types.add(s.settlement_type)
 
+        if isinstance(s, Village) and s.founding_reason in FOUNDING_REASON_STYLES:
+            reason_style = FOUNDING_REASON_STYLES[s.founding_reason]
+            ax.scatter(
+                s.x + FOUNDING_REASON_OFFSET,
+                s.y - FOUNDING_REASON_OFFSET,
+                marker=reason_style["marker"],
+                s=70,
+                c=reason_style["color"],
+                edgecolors="black",
+                linewidths=1.2,
+                zorder=4,
+            )
+            seen_reasons.add(s.founding_reason)
+
+    from matplotlib.lines import Line2D
+
     legend_handles = [
         Patch(color=BIOME_COLORS[name], label=name.title()) for name in BIOME_ORDER
     ]
@@ -88,6 +114,19 @@ def _build_figure(world):
                 markeredgecolor="black",
                 markersize=8,
                 label=stype.replace("_", " ").title(),
+                linestyle="none",
+            )
+        )
+    for reason in sorted(seen_reasons):
+        style = FOUNDING_REASON_STYLES[reason]
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker=style["marker"],
+                color=style["color"],
+                markersize=8,
+                label=f"Village: {reason}",
                 linestyle="none",
             )
         )
