@@ -1,10 +1,10 @@
 SPAWN_WEIGHTS = {
-    "settlement": 70,  # -> becomes Village or City based on population
+    "settlement": 55,  # -> becomes Village or City based on population
     "witch_hut": 8,
-    "school": 8,
+    "school": 6,
     "dungeon": 8,
-    "palace": 3,
-    "portal": 3,
+    "palace": 8,
+    "portal": 6,
 }
 
 FOUNDING_REASONS = ["crops", "mining", "market"]

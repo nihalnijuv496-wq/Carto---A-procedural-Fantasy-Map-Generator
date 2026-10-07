@@ -14,8 +14,8 @@ ICON_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "icons")
 SETTLEMENT_ICON_DIR = os.path.join(ICON_DIR, "settlements")
 REASON_ICON_DIR = os.path.join(ICON_DIR, "reasons")
 
-SETTLEMENT_ICON_ZOOM = 0.8
-REASON_ICON_ZOOM = 0.6
+SETTLEMENT_ICON_ZOOM = 0.6
+REASON_ICON_ZOOM = 0.5
 
 BIOME_ORDER = [
     "deep_ocean",
