@@ -6,6 +6,9 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib.lines import Line2D
+from matplotlib.image import BboxImage
+from matplotlib.legend_handler import HandlerBase
+from matplotlib.transforms import Bbox, TransformedBbox
 
 from generator.terrain import BIOME_COLORS
 from models.settlement import Village
@@ -14,8 +17,8 @@ ICON_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "icons")
 SETTLEMENT_ICON_DIR = os.path.join(ICON_DIR, "settlements")
 REASON_ICON_DIR = os.path.join(ICON_DIR, "reasons")
 
-SETTLEMENT_ICON_ZOOM = 0.6
-REASON_ICON_ZOOM = 0.5
+SETTLEMENT_ICON_ZOOM = 0.02
+REASON_ICON_ZOOM = 0.02
 
 BIOME_ORDER = [
     "deep_ocean",
@@ -90,6 +93,33 @@ def _draw_icon_or_fallback(
         )
 
 
+class _LegendIcon:
+    """Placeholder legend 'handle' that just carries the icon's image array."""
+
+    def __init__(self, image):
+        self.image = image
+
+
+class _HandlerLegendIcon(HandlerBase):
+    """Draws a _LegendIcon as a square image in the legend's handle area."""
+
+    def __init__(self, scale=1.4, **kwargs):
+        super().__init__(**kwargs)
+        self.scale = scale
+
+    def create_artists(
+        self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans
+    ):
+        size = height * self.scale
+        x0 = xdescent + (width - size) / 2
+        y0 = ydescent - (size - height) / 2
+
+        bbox = TransformedBbox(Bbox.from_bounds(x0, y0, size, size), trans)
+        image = BboxImage(bbox, interpolation="nearest")
+        image.set_data(orig_handle.image)
+        return [image]
+
+
 def _biomes_to_index_grid(biomes):
     height, width = biomes.shape
     index_grid = np.zeros((height, width), dtype=int)
@@ -151,40 +181,59 @@ def _build_figure(world):
                 zorder=4,
             )
             seen_reasons.add(s.founding_reason)
-    legend_handles = [
-        Patch(color=BIOME_COLORS[name], label=name.title()) for name in BIOME_ORDER
-    ]
+
+    legend_handles = [Patch(color=BIOME_COLORS[name]) for name in BIOME_ORDER]
+    legend_labels = [name.title() for name in BIOME_ORDER]
+
     for stype in sorted(seen_types):
-        style = SETTLEMENT_STYLES.get(stype, {"marker": "o", "color": "#d32f2f"})
-        legend_handles.append(
-            Line2D(
-                [0],
-                [0],
-                marker=style["marker"],
-                color="w",
-                markerfacecolor=style["color"],
-                markeredgecolor="black",
-                markersize=8,
-                label=stype.replace("_", " ").title(),
-                linestyle="none",
+        icon = _load_icon(os.path.join(SETTLEMENT_ICON_DIR, f"{stype}.png"))
+        if icon is not None:
+            legend_handles.append(_LegendIcon(icon))
+        else:
+            style = SETTLEMENT_STYLES.get(stype, {"marker": "o", "color": "#d32f2f"})
+            legend_handles.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker=style["marker"],
+                    color="w",
+                    markerfacecolor=style["color"],
+                    markeredgecolor="black",
+                    markersize=8,
+                    linestyle="none",
+                )
             )
-        )
+        legend_labels.append(stype.replace("_", " ").title())
+
     for reason in sorted(seen_reasons):
-        style = FOUNDING_REASON_STYLES[reason]
-        legend_handles.append(
-            Line2D(
-                [0],
-                [0],
-                marker=style["marker"],
-                color=style["color"],
-                markersize=8,
-                label=f"Village: {reason}",
-                linestyle="none",
+        icon = _load_icon(os.path.join(REASON_ICON_DIR, f"{reason}.png"))
+        if icon is not None:
+            legend_handles.append(_LegendIcon(icon))
+        else:
+            style = FOUNDING_REASON_STYLES[reason]
+            legend_handles.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker=style["marker"],
+                    color=style["color"],
+                    markersize=8,
+                    linestyle="none",
+                )
             )
-        )
+        legend_labels.append(f"Village: {reason}")
 
     ax.legend(
-        handles=legend_handles, loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=8
+        handles=legend_handles,
+        labels=legend_labels,
+        handler_map={_LegendIcon: _HandlerLegendIcon(scale=3.0)},
+        handlelength=2.5,
+        borderpad=1.2,
+        labelspacing=1.0,
+        handletextpad=1.0,
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1),
+        fontsize=8,
     )
 
     ax.set_title(f"{world.name} (seed={world.seed})")

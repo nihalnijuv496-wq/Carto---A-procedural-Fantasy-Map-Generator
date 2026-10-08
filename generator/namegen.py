@@ -16,12 +16,11 @@ SUFFIXES = [
     "fell",
 ]
 
-# name (no accidental double letters at syllable joins, capitalized).
 _clean = lambda name: name[0].upper() + name[1:] if name else name
 
 
 def _dedupe_letters(text):
-    """Collapse accidental doubled letters at syllable boundaries (e.g. 'Asshelm' -> 'Ashelm')."""
+    """Collapse accidental doubled letters at syllable boundaries"""
     result = []
     for ch in text:
         if result and result[-1].lower() == ch.lower():

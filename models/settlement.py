@@ -1,5 +1,5 @@
 SPAWN_WEIGHTS = {
-    "settlement": 55,  # -> becomes Village or City based on population
+    "settlement": 55,
     "witch_hut": 8,
     "school": 6,
     "dungeon": 8,
