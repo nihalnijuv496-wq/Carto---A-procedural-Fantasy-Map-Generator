@@ -19,17 +19,16 @@ class Settlement:
         self.population = population
 
     @property
-    def settlement_type(self):
+    def settlementType(self):
         return "settlement"
 
     def __repr__(self):
-        return f"<{self.settlement_type.title()} '{self.name}' pop={self.population} at ({self.x},{self.y})>"
+        return f"<{self.settlementType.title()} '{self.name}' pop={self.population} at ({self.x},{self.y})>"
 
-    def to_dict(self):
-        # for database inserts and JSON/CSV export.
+    def toDict(self):
         return {
             "name": self.name,
-            "type": self.settlement_type,
+            "type": self.settlementType,
             "x": self.x,
             "y": self.y,
             "population": self.population,
@@ -40,17 +39,17 @@ class Settlement:
 class Village(Settlement):
     MAX_POPULATION = 500
 
-    def __init__(self, name, x, y, population=None, founding_reason=None):
+    def __init__(self, name, x, y, population=None, foundingReason=None):
         super().__init__(name, x, y, population or Village.MAX_POPULATION // 2)
-        self.founding_reason = founding_reason
+        self.foundingReason = foundingReason
 
     @property
-    def settlement_type(self):
+    def settlementType(self):
         return "village"
 
-    def to_dict(self):
-        data = super().to_dict()
-        data["notes"] = self.founding_reason
+    def toDict(self):
+        data = super().toDict()
+        data["notes"] = self.foundingReason
         return data
 
 
@@ -61,25 +60,25 @@ class City(Settlement):
         super().__init__(name, x, y, population or City.MIN_POPULATION * 2)
 
     @property
-    def settlement_type(self):
+    def settlementType(self):
         return "city"
 
 
 class WitchHut(Settlement):
     @property
-    def settlement_type(self):
+    def settlementType(self):
         return "witch_hut"
 
 
 class School(Settlement):
     @property
-    def settlement_type(self):
+    def settlementType(self):
         return "school"
 
 
 class Dungeon(Settlement):
     @property
-    def settlement_type(self):
+    def settlementType(self):
         return "dungeon"
 
 
@@ -88,17 +87,17 @@ class Palace(Settlement):
         super().__init__(name, x, y, population or 5000)
 
     @property
-    def settlement_type(self):
+    def settlementType(self):
         return "palace"
 
 
 class Portal(Settlement):
     @property
-    def settlement_type(self):
+    def settlementType(self):
         return "portal"
 
 
-SPECIAL_CLASSES = {
+specialClasses = {
     "witch_hut": WitchHut,
     "school": School,
     "dungeon": Dungeon,
@@ -107,11 +106,11 @@ SPECIAL_CLASSES = {
 }
 
 
-def make_settlement(name, x, y, population):
+def makeSettlement(name, x, y, population):
     if population >= City.MIN_POPULATION:
         return City(name, x, y, population)
     return Village(name, x, y, population)
 
 
-def make_special_settlement(settlement_type, name, x, y):
-    return SPECIAL_CLASSES[settlement_type](name, x, y)
+def makeSpecialSettlement(settlementType, name, x, y):
+    return specialClasses[settlementType](name, x, y)

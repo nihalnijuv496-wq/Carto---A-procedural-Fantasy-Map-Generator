@@ -3,26 +3,25 @@ import random
 import sys
 from datetime import datetime
 
-from models.world_map import WorldMap
-from database.db import init_db
+from database.db import initDb
 from database.queries import (
-    save_world,
-    get_all_maps,
-    get_map_by_id,
-    get_settlements_for_map,
-    delete_map,
-    get_total_population,
-    get_largest_settlement,
-    count_settlements_by_type,
+    saveWorld,
+    getAllMaps,
+    getMapById,
+    getSettlementsForMap,
+    deleteMap,
+    getTotalPopulation,
+    getLargestSettlement,
+    countSettlementsByType,
 )
+from models.settlement import makeSettlement, makeSpecialSettlement
 from models.world_map import WorldMap
-from models.settlement import make_settlement, make_special_settlement
-from render.draw_map import save_map, show_map
+from render.draw_map import saveMap, showMap
 
-OUTPUT_DIR = "output"
+outputDir = "output"
 
 
-def _ask_int(prompt, default):
+def askInt(prompt, default):
     raw = input(prompt).strip()
     if not raw:
         return default
@@ -33,7 +32,7 @@ def _ask_int(prompt, default):
         return default
 
 
-def _print_map_list(maps):
+def printMapList(maps):
     for row in maps:
         print(
             f"  id={row['id']}  {row['name']}  "
@@ -42,49 +41,47 @@ def _print_map_list(maps):
         )
 
 
-def generate_new_map():
+def generateNewMap():
     print("\n[Generate New Map]")
 
     name = input("Map name (blank for 'Untitled'): ").strip() or "Untitled"
 
-    width = _ask_int("Width (default 1000): ", default=1000)
-    height = _ask_int("Height (default 1000): ", default=1000)
-    settlement_count = _ask_int("Number of settlements (default 6): ", default=6)
+    width = askInt("Width (default 1000): ", default=1000)
+    height = askInt("Height (default 1000): ", default=1000)
+    settlementCount = askInt("Number of settlements (default 6): ", default=6)
 
     seed = random.randint(0, 999_999)
 
     world = WorldMap(name, width, height, seed)
     world.generate()
-    world.place_settlements(count=settlement_count)
+    world.placeSettlements(count=settlementCount)
 
-    map_id = save_world(world)
+    mapId = saveWorld(world)
 
     print(
-        f"\nGenerated and saved '{name}' as map id={map_id} (seed={seed}, {width}x{height})."
+        f"\nGenerated and saved '{name}' as map id={mapId} (seed={seed}, {width}x{height})."
     )
-    show_map(world=world)
+    showMap(world=world)
     print(world.summary())
 
 
-def _load_world_from_db(map_id):
-    map_row = get_map_by_id(map_id)
-    if map_row is None:
+def loadWorldFromDb(mapId):
+    mapRow = getMapById(mapId)
+    if mapRow is None:
         return None
 
-    world = WorldMap(
-        map_row["name"], map_row["width"], map_row["height"], map_row["seed"]
-    )
+    world = WorldMap(mapRow["name"], mapRow["width"], mapRow["height"], mapRow["seed"])
     world.generate()
 
-    for row in get_settlements_for_map(map_id):
+    for row in getSettlementsForMap(mapId):
         if row["type"] in ("village", "city"):
-            settlement = make_settlement(
+            settlement = makeSettlement(
                 row["name"], row["x"], row["y"], row["population"]
             )
             if row["type"] == "village":
-                settlement.founding_reason = row["notes"]
+                settlement.foundingReason = row["notes"]
         else:
-            settlement = make_special_settlement(
+            settlement = makeSpecialSettlement(
                 row["type"], row["name"], row["x"], row["y"]
             )
         world.settlements.append(settlement)
@@ -92,37 +89,37 @@ def _load_world_from_db(map_id):
     return world
 
 
-def load_saved_map():
+def loadSavedMap():
     print("\n[Load Saved Map]")
 
-    maps = get_all_maps()
+    maps = getAllMaps()
     if not maps:
         print("No saved maps yet — generate one first (option 1).")
         return
 
-    _print_map_list(maps)
-    map_id = _ask_int("Enter map id to load: ", default=maps[0]["id"])
+    printMapList(maps)
+    mapId = askInt("Enter map id to load: ", default=maps[0]["id"])
 
-    world = _load_world_from_db(map_id)
+    world = loadWorldFromDb(mapId)
     if world is None:
         print("No map found with that id.")
         return
 
     print(f"\nLoaded '{world.name}' (seed={world.seed}, {world.width}x{world.height}).")
-    show_map(world=world)
+    showMap(world=world)
     print(world.summary())
 
 
-def list_saved_maps():
+def listSavedMaps():
     print("\n[Saved Maps]")
-    maps = get_all_maps()
+    maps = getAllMaps()
     if not maps:
         print("No saved maps yet — generate one first (option 1).")
         return
-    _print_map_list(maps)
+    printMapList(maps)
 
 
-def manage_maps():
+def manageMaps():
     while True:
         print("\n===== Manage Maps =====")
         print("1. List all maps")
@@ -133,130 +130,129 @@ def manage_maps():
         choice = input("> ").strip()
 
         if choice == "1":
-            _manage_list_maps()
+            manageListMaps()
         elif choice == "2":
-            _manage_view_map_details()
+            manageViewMapDetails()
         elif choice == "3":
-            _manage_delete_map()
+            manageDeleteMap()
         elif choice == "4":
             return
         else:
             print("Invalid choice, please enter a number from 1-4.")
 
 
-def _manage_list_maps():
+def manageListMaps():
     print("\n[Saved Maps]")
-    maps = get_all_maps()
+    maps = getAllMaps()
     if not maps:
         print("No saved maps yet — generate one first (option 1).")
         return
-    _print_map_list(maps)
+    printMapList(maps)
 
 
-def _manage_view_map_details():
+def manageViewMapDetails():
     print("\n[Map Details]")
-    maps = get_all_maps()
+    maps = getAllMaps()
     if not maps:
         print("No saved maps yet — generate one first (option 1).")
         return
 
-    _print_map_list(maps)
-    map_id = _ask_int("Enter map id to view: ", default=maps[0]["id"])
+    printMapList(maps)
+    mapId = askInt("Enter map id to view: ", default=maps[0]["id"])
 
-    map_row = get_map_by_id(map_id)
-    if map_row is None:
+    mapRow = getMapById(mapId)
+    if mapRow is None:
         print("No map found with that id.")
         return
 
-    total_pop = get_total_population(map_id)
-    largest = get_largest_settlement(map_id)
-    type_counts = count_settlements_by_type(map_id)
+    totalPop = getTotalPopulation(mapId)
+    largest = getLargestSettlement(mapId)
+    typeCounts = countSettlementsByType(mapId)
 
     print(
-        f"\n{map_row['name']}  ({map_row['width']}x{map_row['height']}, seed={map_row['seed']})"
+        f"\n{mapRow['name']}  ({mapRow['width']}x{mapRow['height']}, seed={mapRow['seed']})"
     )
-    print(f"  Total population: {total_pop}")
-    print(f"  Settlements by type: {type_counts or 'none'}")
+    print(f"  Total population: {totalPop}")
+    print(f"  Settlements by type: {typeCounts or 'none'}")
     if largest:
         print(
             f"  Largest settlement: {largest['name']} ({largest['type']}, pop={largest['population']})"
         )
 
 
-def _manage_delete_map():
+def manageDeleteMap():
     print("\n[Delete Map]")
-    maps = get_all_maps()
+    maps = getAllMaps()
     if not maps:
         print("No saved maps yet — nothing to delete.")
         return
 
-    _print_map_list(maps)
-    map_id = _ask_int("Enter map id to delete: ", default=maps[0]["id"])
+    printMapList(maps)
+    mapId = askInt("Enter map id to delete: ", default=maps[0]["id"])
 
-    map_row = get_map_by_id(map_id)
-    if map_row is None:
+    mapRow = getMapById(mapId)
+    if mapRow is None:
         print("No map found with that id.")
         return
 
     confirm = (
         input(
-            f"Delete '{map_row['name']}' (id={map_id}) and all its settlements? [y/N]: "
+            f"Delete '{mapRow['name']}' (id={mapId}) and all its settlements? [y/N]: "
         )
         .strip()
         .lower()
     )
     if confirm == "y":
-        delete_map(map_id)
+        deleteMap(mapId)
         print("Deleted.")
     else:
         print("Cancelled.")
 
 
-def export_map():
+def exportMap():
     print("\n[Export Map]")
 
-    maps = get_all_maps()
+    maps = getAllMaps()
     if not maps:
         print("No maps to export yet - generate one first (option 1).")
         return
 
-    _print_map_list(maps)
-    map_id = _ask_int("Enter map id to export: ", default=maps[0]["id"])
+    printMapList(maps)
+    mapId = askInt("Enter map id to export: ", default=maps[0]["id"])
 
-    world = _load_world_from_db(map_id)
+    world = loadWorldFromDb(mapId)
     if world is None:
         print("No map found with that id.")
         return
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(outputDir, exist_ok=True)
     filename = f"{world.name.replace(' ', '_')}_{world.seed}.png"
-    filepath = os.path.join(OUTPUT_DIR, filename)
+    filepath = os.path.join(outputDir, filename)
 
-    save_map(world, filepath)
+    saveMap(world, filepath)
     print(f"Saved to {filepath}")
 
 
 def exportMapDetailsTxt():
-    """Write a map's details to a .txt file, using only data queried from the database."""
     print("\n[Export Map Details (TXT)]")
 
-    maps = get_all_maps()
+    maps = getAllMaps()
     if not maps:
         print("No maps to export yet - generate one first (option 1).")
         return
 
-    _print_map_list(maps)
-    mapId = _ask_int("Enter map id to export details for: ", default=maps[0]["id"])
+    printMapList(maps)
+    mapId = askInt("Enter map id to export details for: ", default=maps[0]["id"])
 
-    mapRow = get_map_by_id(mapId)
+    mapRow = getMapById(mapId)
     if mapRow is None:
         print("No map found with that id.")
         return
 
-    settlementRows = get_settlements_for_map(mapId)
-    totalPop = get_total_population(mapId)
-    largest = get_largest_settlement(mapId)
-    typeCounts = count_settlements_by_type(mapId)
+    settlementRows = getSettlementsForMap(mapId)
+    totalPop = getTotalPopulation(mapId)
+    largest = getLargestSettlement(mapId)
+    typeCounts = countSettlementsByType(mapId)
 
     lines = [
         "=" * 50,
@@ -298,9 +294,9 @@ def exportMapDetailsTxt():
             f"({row['x']:>4}, {row['y']:>4})  pop={row['population']:<6} {notes}".rstrip()
         )
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(outputDir, exist_ok=True)
     fileName = f"{mapRow['name'].replace(' ', '_')}_{mapRow['seed']}_details.txt"
-    filePath = os.path.join(OUTPUT_DIR, fileName)
+    filePath = os.path.join(outputDir, fileName)
 
     with open(filePath, "w", encoding="utf-8") as outFile:
         outFile.write("\n".join(lines) + "\n")
@@ -308,16 +304,16 @@ def exportMapDetailsTxt():
     print(f"Saved to {filePath}")
 
 
-MENU_ACTIONS = {
-    "1": generate_new_map,
-    "2": load_saved_map,
-    "3": manage_maps,
-    "4": export_map,
+menuActions = {
+    "1": generateNewMap,
+    "2": loadSavedMap,
+    "3": manageMaps,
+    "4": exportMap,
     "5": exportMapDetailsTxt,
 }
 
 
-def print_menu():
+def printMenu():
     print("\n===== Carto =====")
     print("1. Generate new map")
     print("2. Load saved map")
@@ -328,18 +324,18 @@ def print_menu():
 
 
 def main():
-    init_db()
+    initDb()
     print("Welcome to Cartor - a procedural fantasy map generator.")
 
     while True:
-        print_menu()
+        printMenu()
         choice = input("> ").strip()
 
         if choice == "6":
             print("Goodbye!")
             sys.exit(0)
 
-        action = MENU_ACTIONS.get(choice)
+        action = menuActions.get(choice)
         if action:
             action()
         else:

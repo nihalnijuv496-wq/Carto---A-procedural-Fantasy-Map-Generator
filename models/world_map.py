@@ -1,18 +1,18 @@
 import random
 
-from generator.terrain import generate_terrain, classify_biomes
-from generator.namegen import generate_unique_names
+from generator.namegen import generateUniqueNames
+from generator.terrain import classifyBiomes, generateTerrain
 from models.settlement import (
-    make_settlement,
-    make_special_settlement,
-    Village,
-    SPAWN_WEIGHTS,
     FOUNDING_REASONS,
+    SPAWN_WEIGHTS,
+    Village,
+    makeSettlement,
+    makeSpecialSettlement,
 )
 
-MINING_BIOMES = {"mountain", "mountain_snow"}
-MARKET_BIOMES = {"coast", "ocean", "deep_ocean"}
-CROPS_BIOMES = {"plains", "forest", "deep_forest"}
+miningBiomes = {"mountain", "mountain_snow"}
+marketBiomes = {"coast", "ocean", "deep_ocean"}
+cropsBiomes = {"plains", "forest", "deep_forest"}
 
 
 class WorldMap:
@@ -25,20 +25,20 @@ class WorldMap:
         self.elevation = None
         self.moisture = None
         self.temperature = None
-        self.ice_noise = None
+        self.iceNoise = None
         self.biomes = None
         self.settlements = []
 
     def generate(self):
-        self.elevation, self.moisture, self.temperature, self.ice_noise = (
-            generate_terrain(self.width, self.height, self.seed)
+        self.elevation, self.moisture, self.temperature, self.iceNoise = (
+            generateTerrain(self.width, self.height, self.seed)
         )
-        self.biomes = classify_biomes(
-            self.elevation, self.moisture, self.temperature, self.ice_noise
+        self.biomes = classifyBiomes(
+            self.elevation, self.moisture, self.temperature, self.iceNoise
         )
         return self
 
-    def _land_cells(self):
+    def landCells(self):
         buildable = {
             "plains",
             "forest",
@@ -55,7 +55,7 @@ class WorldMap:
                     cells.append((x, y))
         return cells
 
-    def _nearby_biomes(self, x, y, radius=2):
+    def nearbyBiomes(self, x, y, radius=2):
         found = set()
         for dy in range(-radius, radius + 1):
             for dx in range(-radius, radius + 1):
@@ -64,42 +64,42 @@ class WorldMap:
                     found.add(self.biomes[ny, nx])
         return found
 
-    def _pick_founding_reason(self, x, y, rng):
-        nearby = self._nearby_biomes(x, y)
-        if nearby & MINING_BIOMES:
+    def pickFoundingReason(self, x, y, rng):
+        nearby = self.nearbyBiomes(x, y)
+        if nearby & miningBiomes:
             return "mining"
-        if nearby & MARKET_BIOMES:
+        if nearby & marketBiomes:
             return "market"
-        if nearby & CROPS_BIOMES:
+        if nearby & cropsBiomes:
             return "crops"
         return rng.choice(FOUNDING_REASONS)
 
-    def place_settlements(self, count=6):
+    def placeSettlements(self, count=6):
         if self.biomes is None:
             raise RuntimeError("Call generate() before placing settlements.")
 
         rng = random.Random(self.seed + 1000)
-        land_cells = self._land_cells()
+        landCells = self.landCells()
 
-        if len(land_cells) < count:
-            count = len(land_cells)
+        if len(landCells) < count:
+            count = len(landCells)
 
-        chosen_cells = rng.sample(land_cells, count)
-        names = generate_unique_names(count, seed=self.seed)
+        chosenCells = rng.sample(landCells, count)
+        names = generateUniqueNames(count, seed=self.seed)
 
         types = list(SPAWN_WEIGHTS.keys())
         weights = list(SPAWN_WEIGHTS.values())
 
-        for (x, y), name in zip(chosen_cells, names):
-            settlement_type = rng.choices(types, weights=weights, k=1)[0]
+        for (x, y), name in zip(chosenCells, names):
+            settlementType = rng.choices(types, weights=weights, k=1)[0]
 
-            if settlement_type == "settlement":
+            if settlementType == "settlement":
                 population = rng.choice([150, 300, 450, 700, 1200, 2500])
-                settlement = make_settlement(name, x, y, population)
+                settlement = makeSettlement(name, x, y, population)
                 if isinstance(settlement, Village):
-                    settlement.founding_reason = self._pick_founding_reason(x, y, rng)
+                    settlement.foundingReason = self.pickFoundingReason(x, y, rng)
             else:
-                settlement = make_special_settlement(settlement_type, name, x, y)
+                settlement = makeSpecialSettlement(settlementType, name, x, y)
 
             self.settlements.append(settlement)
 
@@ -108,18 +108,11 @@ class WorldMap:
     def summary(self):
         lines = [f"Map '{self.name}' ({self.width}x{self.height}, seed={self.seed})"]
         lines.append(f"  Settlements: {len(self.settlements)}")
-        for s in self.settlements:
+        for settlement in self.settlements:
             extra = (
-                f" ({s.founding_reason})"
-                if isinstance(s, Village) and s.founding_reason
+                f" ({settlement.foundingReason})"
+                if isinstance(settlement, Village) and settlement.foundingReason
                 else ""
             )
-            lines.append(f"    - {s}{extra}")
-        return "\n".join(lines)
-
-    def summary(self):
-        lines = [f"Map '{self.name}' ({self.width}x{self.height}, seed={self.seed})"]
-        lines.append(f"  Settlements: {len(self.settlements)}")
-        for s in self.settlements:
-            lines.append(f"    - {s}")
+            lines.append(f"    - {settlement}{extra}")
         return "\n".join(lines)

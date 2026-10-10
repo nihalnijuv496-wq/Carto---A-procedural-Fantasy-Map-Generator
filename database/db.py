@@ -1,21 +1,20 @@
-import sqlite3
 import os
+import sqlite3
 
 DB_PATH = os.path.join("data", "world.db")
 
 
-def get_connection():
+def getConnection():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    """ Row factory is set to sqlite3.Row
-        so query results can be accessed like dicts (row["name"])."""
+    # sqlite3.Row makes results be accessed like dicts
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
-def init_db():
-    conn = get_connection()
+def initDb():
+    conn = getConnection()
     cur = conn.cursor()
 
     cur.execute("""

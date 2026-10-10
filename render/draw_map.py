@@ -1,26 +1,26 @@
 import os
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.colors import ListedColormap
-from matplotlib.patches import Patch
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-from matplotlib.lines import Line2D
 from matplotlib.image import BboxImage
 from matplotlib.legend_handler import HandlerBase
+from matplotlib.lines import Line2D
+from matplotlib.offsetbox import AnnotationBbox, OffsetImage
+from matplotlib.patches import Patch
 from matplotlib.transforms import Bbox, TransformedBbox
 
-from generator.terrain import BIOME_COLORS
+from generator.terrain import biomeColors
 from models.settlement import Village
 
-ICON_DIR = os.path.join(os.path.dirname(__file__), "..", "assets", "icons")
-SETTLEMENT_ICON_DIR = os.path.join(ICON_DIR, "settlements")
-REASON_ICON_DIR = os.path.join(ICON_DIR, "reasons")
+iconDir = os.path.join(os.path.dirname(__file__), "..", "assets", "icons")
+settlementIconDir = os.path.join(iconDir, "settlements")
+reasonIconDir = os.path.join(iconDir, "reasons")
 
-SETTLEMENT_ICON_ZOOM = 0.02
-REASON_ICON_ZOOM = 0.02
+settlementIconZoom = 0.02
+reasonIconZoom = 0.02
 
-BIOME_ORDER = [
+biomeOrder = [
     "deep_ocean",
     "ocean",
     "ice",
@@ -34,9 +34,9 @@ BIOME_ORDER = [
     "mountain_snow",
     "snowy_land",
 ]
-BIOME_TO_INDEX = {name: i for i, name in enumerate(BIOME_ORDER)}
+biomeToIndex = {name: i for i, name in enumerate(biomeOrder)}
 
-SETTLEMENT_STYLES = {
+settlementStyles = {
     "village": {"marker": "o", "color": "#d32f2f", "size": 30},
     "city": {"marker": "s", "color": "#d32f2f", "size": 60},
     "witch_hut": {"marker": "^", "color": "#8e44ad", "size": 50},
@@ -46,69 +46,63 @@ SETTLEMENT_STYLES = {
     "portal": {"marker": "D", "color": "#00e5ff", "size": 55},
 }
 
-FOUNDING_REASON_STYLES = {
+foundingReasonStyles = {
     "mining": {"marker": "v", "color": "#6d4c41"},
     "market": {"marker": "<", "color": "#f1c40f"},
     "crops": {"marker": "p", "color": "#9ccc65"},
 }
 
-FOUNDING_REASON_OFFSET = 15
+foundingReasonOffset = 15
+
+iconCache = {}
 
 
-_icon_cache = {}
-
-
-def _load_icon(filepath):
-
-    if filepath in _icon_cache:
-        return _icon_cache[filepath]
+def loadIcon(filepath):
+    if filepath in iconCache:
+        return iconCache[filepath]
 
     if not os.path.isfile(filepath):
-        _icon_cache[filepath] = None
+        iconCache[filepath] = None
         return None
 
     image = plt.imread(filepath)
-    _icon_cache[filepath] = image
+    iconCache[filepath] = image
     return image
 
 
-def _draw_icon_or_fallback(
-    ax, x, y, image_path, zoom, fallback_style, fallback_size, zorder
-):
-    image = _load_icon(image_path)
+def drawIconOrFallback(ax, x, y, imagePath, zoom, fallbackStyle, fallbackSize, zorder):
+    image = loadIcon(imagePath)
 
     if image is not None:
-        imagebox = OffsetImage(image, zoom=zoom, resample=False)
-        ab = AnnotationBbox(imagebox, (x, y), frameon=False, pad=0, zorder=zorder)
-        ax.add_artist(ab)
+        imageBox = OffsetImage(image, zoom=zoom, resample=False)
+        annotation = AnnotationBbox(
+            imageBox, (x, y), frameon=False, pad=0, zorder=zorder
+        )
+        ax.add_artist(annotation)
     else:
         ax.scatter(
             x,
             y,
-            marker=fallback_style["marker"],
-            s=fallback_size,
-            c=fallback_style["color"],
+            marker=fallbackStyle["marker"],
+            s=fallbackSize,
+            c=fallbackStyle["color"],
             edgecolors="black",
             zorder=zorder,
         )
 
 
-class _LegendIcon:
-    """Placeholder legend 'handle' that just carries the icon's image array."""
-
+class LegendIcon:
     def __init__(self, image):
         self.image = image
 
 
-class _HandlerLegendIcon(HandlerBase):
-    """Draws a _LegendIcon as a square image in the legend's handle area."""
-
+class HandlerLegendIcon(HandlerBase):
     def __init__(self, scale=1.4, **kwargs):
         super().__init__(**kwargs)
         self.scale = scale
 
-    def create_artists(
-        self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans
+    def createArtists(
+        self, legend, origHandle, xdescent, ydescent, width, height, fontsize, trans
     ):
         size = height * self.scale
         x0 = xdescent + (width - size) / 2
@@ -116,82 +110,88 @@ class _HandlerLegendIcon(HandlerBase):
 
         bbox = TransformedBbox(Bbox.from_bounds(x0, y0, size, size), trans)
         image = BboxImage(bbox, interpolation="nearest")
-        image.set_data(orig_handle.image)
+        image.set_data(origHandle.image)
         return [image]
 
 
-def _biomes_to_index_grid(biomes):
+def biomesToIndexGrid(biomes):
     height, width = biomes.shape
-    index_grid = np.zeros((height, width), dtype=int)
+    indexGrid = np.zeros((height, width), dtype=int)
     for y in range(height):
         for x in range(width):
-            index_grid[y, x] = BIOME_TO_INDEX[biomes[y, x]]
-    return index_grid
+            indexGrid[y, x] = biomeToIndex[biomes[y, x]]
+    return indexGrid
 
 
-def _build_figure(world):
-    """Shared rendering logic used by both show_map() and save_map()."""
-    index_grid = _biomes_to_index_grid(world.biomes)
-    cmap = ListedColormap([BIOME_COLORS[name] for name in BIOME_ORDER])
+def buildFigure(world):
+    indexGrid = biomesToIndexGrid(world.biomes)
+    cmap = ListedColormap([biomeColors[name] for name in biomeOrder])
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.imshow(index_grid, cmap=cmap, vmin=0, vmax=len(BIOME_ORDER) - 1, origin="upper")
+    ax.imshow(indexGrid, cmap=cmap, vmin=0, vmax=len(biomeOrder) - 1, origin="upper")
 
-    seen_types = set()
-    seen_reasons = set()
+    seenTypes = set()
+    seenReasons = set()
 
-    for s in world.settlements:
-        icon_path = os.path.join(SETTLEMENT_ICON_DIR, f"{s.settlement_type}.png")
-        fallback = SETTLEMENT_STYLES.get(
-            s.settlement_type, {"marker": "o", "color": "#d32f2f"}
+    for settlement in world.settlements:
+        iconPath = os.path.join(settlementIconDir, f"{settlement.settlementType}.png")
+        fallback = settlementStyles.get(
+            settlement.settlementType, {"marker": "o", "color": "#d32f2f"}
         )
-        _draw_icon_or_fallback(
+        drawIconOrFallback(
             ax,
-            s.x,
-            s.y,
-            icon_path,
-            SETTLEMENT_ICON_ZOOM,
+            settlement.x,
+            settlement.y,
+            iconPath,
+            settlementIconZoom,
             fallback,
             fallback.get("size", 30),
             zorder=3,
         )
 
         ax.annotate(
-            s.name,
-            (s.x, s.y),
+            settlement.name,
+            (settlement.x, settlement.y),
             fontsize=7,
             color="white",
             xytext=(3, 3),
             textcoords="offset points",
             zorder=5,
         )
-        seen_types.add(s.settlement_type)
+        seenTypes.add(settlement.settlementType)
 
-        if isinstance(s, Village) and s.founding_reason in FOUNDING_REASON_STYLES:
-            reason_icon_path = os.path.join(REASON_ICON_DIR, f"{s.founding_reason}.png")
-            reason_fallback = FOUNDING_REASON_STYLES[s.founding_reason]
-            _draw_icon_or_fallback(
+        if (
+            isinstance(settlement, Village)
+            and settlement.foundingReason in foundingReasonStyles
+        ):
+            reasonIconPath = os.path.join(
+                reasonIconDir, f"{settlement.foundingReason}.png"
+            )
+            reasonFallback = foundingReasonStyles[settlement.foundingReason]
+            drawIconOrFallback(
                 ax,
-                s.x + FOUNDING_REASON_OFFSET,
-                s.y - FOUNDING_REASON_OFFSET,
-                reason_icon_path,
-                REASON_ICON_ZOOM,
-                reason_fallback,
+                settlement.x + foundingReasonOffset,
+                settlement.y - foundingReasonOffset,
+                reasonIconPath,
+                reasonIconZoom,
+                reasonFallback,
                 70,
                 zorder=4,
             )
-            seen_reasons.add(s.founding_reason)
+            seenReasons.add(settlement.foundingReason)
 
-    legend_handles = [Patch(color=BIOME_COLORS[name]) for name in BIOME_ORDER]
-    legend_labels = [name.title() for name in BIOME_ORDER]
+    legendHandles = [Patch(color=biomeColors[name]) for name in biomeOrder]
+    legendLabels = [name.title() for name in biomeOrder]
 
-    for stype in sorted(seen_types):
-        icon = _load_icon(os.path.join(SETTLEMENT_ICON_DIR, f"{stype}.png"))
+    for settlementType in sorted(seenTypes):
+        icon = loadIcon(os.path.join(settlementIconDir, f"{settlementType}.png"))
         if icon is not None:
-            legend_handles.append(_LegendIcon(icon))
+            legendHandles.append(LegendIcon(icon))
         else:
-            style = SETTLEMENT_STYLES.get(stype, {"marker": "o", "color": "#d32f2f"})
-            legend_handles.append(
+            style = settlementStyles.get(
+                settlementType, {"marker": "o", "color": "#d32f2f"}
+            )
+            legendHandles.append(
                 Line2D(
                     [0],
                     [0],
@@ -203,15 +203,15 @@ def _build_figure(world):
                     linestyle="none",
                 )
             )
-        legend_labels.append(stype.replace("_", " ").title())
+        legendLabels.append(settlementType.replace("_", " ").title())
 
-    for reason in sorted(seen_reasons):
-        icon = _load_icon(os.path.join(REASON_ICON_DIR, f"{reason}.png"))
+    for reason in sorted(seenReasons):
+        icon = loadIcon(os.path.join(reasonIconDir, f"{reason}.png"))
         if icon is not None:
-            legend_handles.append(_LegendIcon(icon))
+            legendHandles.append(LegendIcon(icon))
         else:
-            style = FOUNDING_REASON_STYLES[reason]
-            legend_handles.append(
+            style = foundingReasonStyles[reason]
+            legendHandles.append(
                 Line2D(
                     [0],
                     [0],
@@ -221,12 +221,12 @@ def _build_figure(world):
                     linestyle="none",
                 )
             )
-        legend_labels.append(f"Village: {reason}")
+        legendLabels.append(f"Village: {reason}")
 
     ax.legend(
-        handles=legend_handles,
-        labels=legend_labels,
-        handler_map={_LegendIcon: _HandlerLegendIcon(scale=3.0)},
+        handles=legendHandles,
+        labels=legendLabels,
+        handler_map={LegendIcon: HandlerLegendIcon(scale=3.0)},
         handlelength=2.5,
         borderpad=1.2,
         labelspacing=1.0,
@@ -243,14 +243,14 @@ def _build_figure(world):
     return fig
 
 
-def show_map(world):
-    fig = _build_figure(world)
+def showMap(world):
+    fig = buildFigure(world)
     plt.show()
     plt.close(fig)
 
 
-def save_map(world, filepath):
-    fig = _build_figure(world)
+def saveMap(world, filepath):
+    fig = buildFigure(world)
     fig.savefig(filepath, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return filepath
