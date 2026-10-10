@@ -101,7 +101,7 @@ class HandlerLegendIcon(HandlerBase):
         super().__init__(**kwargs)
         self.scale = scale
 
-    def createArtists(
+    def create_artists(
         self, legend, origHandle, xdescent, ydescent, width, height, fontsize, trans
     ):
         size = height * self.scale
