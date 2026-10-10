@@ -325,7 +325,7 @@ def printMenu():
 
 def main():
     initDb()
-    print("Welcome to Cartor - a procedural fantasy map generator.")
+    print("Welcome to Carto - a procedural fantasy map generator.")
 
     while True:
         printMenu()
