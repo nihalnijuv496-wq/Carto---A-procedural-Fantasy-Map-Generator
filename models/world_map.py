@@ -106,7 +106,6 @@ class WorldMap:
         return self.settlements
 
     def summary(self):
-        """Human-readable summary — handy for the CLI menu."""
         lines = [f"Map '{self.name}' ({self.width}x{self.height}, seed={self.seed})"]
         lines.append(f"  Settlements: {len(self.settlements)}")
         for s in self.settlements:

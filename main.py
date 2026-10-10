@@ -1,6 +1,7 @@
 import os
 import random
 import sys
+from datetime import datetime
 
 from models.world_map import WorldMap
 from database.db import init_db
@@ -235,11 +236,84 @@ def export_map():
     print(f"Saved to {filepath}")
 
 
+def exportMapDetailsTxt():
+    """Write a map's details to a .txt file, using only data queried from the database."""
+    print("\n[Export Map Details (TXT)]")
+
+    maps = get_all_maps()
+    if not maps:
+        print("No maps to export yet - generate one first (option 1).")
+        return
+
+    _print_map_list(maps)
+    mapId = _ask_int("Enter map id to export details for: ", default=maps[0]["id"])
+
+    mapRow = get_map_by_id(mapId)
+    if mapRow is None:
+        print("No map found with that id.")
+        return
+
+    settlementRows = get_settlements_for_map(mapId)
+    totalPop = get_total_population(mapId)
+    largest = get_largest_settlement(mapId)
+    typeCounts = count_settlements_by_type(mapId)
+
+    lines = [
+        "=" * 50,
+        "MAP DETAILS",
+        "=" * 50,
+        f"Name:      {mapRow['name']}",
+        f"Map ID:    {mapRow['id']}",
+        f"Seed:      {mapRow['seed']}",
+        f"Size:      {mapRow['width']} x {mapRow['height']}",
+        f"Created:   {mapRow['created_at']}",
+        f"Exported:  {datetime.now().isoformat(sep=' ', timespec='seconds')}",
+        "",
+        "--- Summary ---",
+        f"Total settlements: {len(settlementRows)}",
+        f"Total population:  {totalPop}",
+        "Settlements by type:",
+    ]
+
+    if typeCounts:
+        for typeName, count in typeCounts.items():
+            lines.append(f"  {typeName}: {count}")
+    else:
+        lines.append("  none")
+
+    if largest:
+        lines.append(
+            f"Largest settlement: {largest['name']} "
+            f"({largest['type']}, pop={largest['population']})"
+        )
+
+    lines.append("")
+    lines.append("--- Settlements (largest first) ---")
+
+    sortedRows = sorted(settlementRows, key=lambda row: row["population"], reverse=True)
+    for row in sortedRows:
+        notes = f"founded for: {row['notes']}" if row["notes"] else ""
+        lines.append(
+            f"{row['name']:<16} {row['type']:<10} "
+            f"({row['x']:>4}, {row['y']:>4})  pop={row['population']:<6} {notes}".rstrip()
+        )
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    fileName = f"{mapRow['name'].replace(' ', '_')}_{mapRow['seed']}_details.txt"
+    filePath = os.path.join(OUTPUT_DIR, fileName)
+
+    with open(filePath, "w", encoding="utf-8") as outFile:
+        outFile.write("\n".join(lines) + "\n")
+
+    print(f"Saved to {filePath}")
+
+
 MENU_ACTIONS = {
     "1": generate_new_map,
     "2": load_saved_map,
     "3": manage_maps,
     "4": export_map,
+    "5": exportMapDetailsTxt,
 }
 
 
@@ -249,7 +323,8 @@ def print_menu():
     print("2. Load saved map")
     print("3. Manage maps")
     print("4. Export map(PNG)")
-    print("5. Exit")
+    print("5. Export map details (TXT)")
+    print("6. Exit")
 
 
 def main():
@@ -260,7 +335,7 @@ def main():
         print_menu()
         choice = input("> ").strip()
 
-        if choice == "5":
+        if choice == "6":
             print("Goodbye!")
             sys.exit(0)
 
@@ -268,7 +343,7 @@ def main():
         if action:
             action()
         else:
-            print("Invalid choice, please enter a number from 1-5.")
+            print("Invalid choice, please enter a number from 1-6.")
 
 
 if __name__ == "__main__":
